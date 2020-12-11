@@ -4,57 +4,77 @@ import scala.annotation.tailrec
 import scala.io.Source
 
 object Day11 extends App {
-
+  type SeatMap = Map[Int, Map[Int, Spot]]
   val lines = Source.fromResource("day11Input.txt").getLines.toArray
-  val spots = lines.zipWithIndex.map(y => y._2 -> y._1.toCharArray.zipWithIndex.map(x => x._2 -> Spot(x._1)).toMap).toMap
+  val seatMap: SeatMap = lines.zipWithIndex.map(y => y._2 -> y._1.toCharArray.zipWithIndex.map(x => x._2 -> Spot(x._1)).toMap).toMap
 
-  val neighbours = for {
+  val directions = for {
     y <- -1 to 1
     x <- -1 to 1
     if y != 0 || x != 0
   } yield (x, y)
 
-  val temp = transform(spots)
-  println(countOccupiedSeats(temp))
+  val part1 = transform(seatMap, 4, findDirectNeighbours)
+  println(countOccupiedSeats(part1))
+
+  val part2 = transform(seatMap, 5, findVisibleSeats)
+  println(countOccupiedSeats(part2))
 
   @tailrec
-  def transform(spots: Map[Int, Map[Int, Spot]]): Map[Int, Map[Int, Spot]] = {
+  def transform(spots: SeatMap, maxOccupied: Int, findSeats: (Int, Int, SeatMap) => Seq[Spot]): SeatMap = {
     var changed = false
-    val newArrangement = spots.map { y =>
-      y._1 -> y._2.map { x =>
-        val neighboursOccupiedAmount = neighbours.foldLeft(0) { (acc, neighbourCoordinate) =>
-          val newX = x._1 + neighbourCoordinate._1
-          val newY = y._1 + neighbourCoordinate._2
+    val newArrangement = spots.map { yEntry =>
+      yEntry._1 -> yEntry._2.map { xEntry =>
+        val neighboursOccupiedAmount = findSeats(xEntry._1, yEntry._1, spots).count(_.isOccupied)
 
-          val spot = spots.get(newY).flatMap( _.get(newX))
-          spot match {
-            case Some(spot) if spot.isOccupied => acc + 1
-            case _ => acc
-          }
-        }
-        if (x._2.isEmptySeat && neighboursOccupiedAmount == 0) {
+        if (xEntry._2.isEmptySeat && neighboursOccupiedAmount == 0) {
           changed = true
-          x._1 -> Spot('#')
+          xEntry._1 -> Spot('#')
         }
-        else if (x._2.isOccupied && neighboursOccupiedAmount >= 4) {
+        else if (xEntry._2.isOccupied && neighboursOccupiedAmount >= maxOccupied) {
           changed = true
-          x._1 -> Spot('L')
+          xEntry._1 -> Spot('L')
         }
-        else x._1 -> Spot(x._2.char)
+        else xEntry._1 -> Spot(xEntry._2.char)
       }
     }
     if (!changed) newArrangement
-    else transform(newArrangement)
+    else transform(newArrangement, maxOccupied, findSeats)
   }
 
-  def countOccupiedSeats(spots: Map[Int, Map[Int, Spot]]): Int = {
+  def findDirectNeighbours(x: Int, y: Int, spots: SeatMap): Seq[Spot] = {
+    directions.flatMap { coord =>
+      val newX = x + coord._1
+      val newY = y + coord._2
+      getSpot(newX, newY, spots)
+    }
+  }
+
+  def findVisibleSeats(x: Int, y: Int, spots: SeatMap): Seq[Spot] = {
+    directions.flatMap(coord => findVisibleSeats(x + coord._1, y + coord._2, coord._1, coord._2, spots))
+  }
+
+  @tailrec
+  def findVisibleSeats(x: Int, y: Int, slopeX: Int, slopeY: Int, spots: SeatMap): Option[Spot] = {
+    val nextX = x + slopeX
+    val nextY = y + slopeY
+
+    getSpot(x, y, spots) match {
+      case Some(spot) if !spot.isFloor => Some(spot)
+      case None => None
+      case _ => findVisibleSeats(nextX, nextY, slopeX, slopeY, spots)
+    }
+  }
+
+  def getSpot(x: Int, y: Int, spots: SeatMap): Option[Spot] = spots.get(y).flatMap(_.get(x))
+
+  def countOccupiedSeats(spots: SeatMap): Int =
     spots.values.foldLeft(0) { (acc, line) =>
       line.values.foldLeft(acc) {
         case (innerAcc, spot) if spot.isOccupied => innerAcc + 1
         case (innerAcc, _) => innerAcc
       }
     }
-  }
 
   case class Spot(char: Char) {
     def isEmptySeat: Boolean = char == 'L'
@@ -63,7 +83,5 @@ object Day11 extends App {
 
     def isFloor: Boolean = char == '.'
 
-    def print(): Unit = System.out.print(char)
   }
-
 }
