@@ -13,6 +13,11 @@ object Day12 extends App {
   val finalShip = moves.foldLeft(Ship(Position(0, 0), East))((ship, move) => ship.sail(move))
   // Part 1
   println(finalShip.position.getManhattanDistance)
+
+  val finalShipWithWaypoint = moves.foldLeft(ShipWithWaypoint(Position(0, 0), Position(10, 1)))((ship, move) => ship.sail(move))
+  // Part 1
+  println(finalShipWithWaypoint.position.getManhattanDistance)
+
 }
 
 case class Ship(position: Position, heading: Heading) {
@@ -30,11 +35,39 @@ case class Ship(position: Position, heading: Heading) {
   }
 }
 
+case class ShipWithWaypoint(position: Position, waypoint: Position) {
+
+  def sail(move: Move): ShipWithWaypoint = {
+    move.direction match {
+      case 'N' => ShipWithWaypoint(position, waypoint.change(North, move.amount))
+      case 'E' => ShipWithWaypoint(position, waypoint.change(East, move.amount))
+      case 'S' => ShipWithWaypoint(position, waypoint.change(South, move.amount))
+      case 'W' => ShipWithWaypoint(position, waypoint.change(West, move.amount))
+      case 'F' => ShipWithWaypoint(position.change(waypoint, move.amount), waypoint)
+      case 'L' => ShipWithWaypoint(position, waypoint.rotate(move))
+      case 'R' => ShipWithWaypoint(position, waypoint.rotate(move))
+    }
+  }
+}
+
 case class Position(x: Int, y: Int) {
 
   def change(heading: Heading, amount: Int): Position = Position(x + heading.xComponent * amount, y + heading.yComponent * amount)
 
+  def change(waypoint: Position, amount: Int): Position = Position(x + amount * waypoint.x, y + amount * waypoint.y)
+
   def getManhattanDistance: Int = Math.abs(x) + Math.abs(y)
+
+  def rotate(move: Move): Position = {
+    move.direction match {
+      case 'R' if move.amount == 90 => Position(y, -x)
+      case 'R' if move.amount == 180 => Position(-x, -y)
+      case 'R' if move.amount == 270 => Position(-y, x)
+      case 'L' if move.amount == 90 => Position(-y, x)
+      case 'L' if move.amount == 180 => Position(-x, -y)
+      case 'L' if move.amount == 270 => Position(y, -x)
+    }
+  }
 }
 
 abstract class Heading() {
@@ -83,5 +116,4 @@ case object West extends Heading {
 }
 
 case class Move(direction: Char, amount: Int)
-
 
