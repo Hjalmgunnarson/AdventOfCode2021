@@ -1,5 +1,6 @@
 package adventOfCode
 
+import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
 object Day14 extends App {
@@ -11,38 +12,44 @@ object Day14 extends App {
     case memPattern(address, number) => Mem(address.toLong, number.toLong)
   }.toArray
 
-  val emptyMask = (0 until 36).map(_ => 'X').toString()
-  val lastComputer = program.foldLeft(Computer(Map.empty[Long, IntIsh], Mask(emptyMask)))((computer, instruction) => computer.execute(instruction))
-  println(lastComputer.memory.values.map(intIsh => toLong(intIsh)).sum)
+  // Part1
+  val emptyMask = (0 until 36).map(_ => 'X').mkString
+  val emptyMemory = Map.empty[Long, IntIsh]
 
-  type IntIsh = Array[Boolean]
 
-  case class Computer(memory: Map[Long, IntIsh], currentMask: Mask) {
+  val lastComputerV1 = program.foldLeft(Computer(emptyMemory, Mask(emptyMask), 1))((computer, instruction) => computer.execute(instruction))
+  println(lastComputerV1.memory.values.map(intIsh => intIshToLong(intIsh)).sum)
 
-    def setMask(mask: Mask): Computer = Computer(memory, mask)
+  // Part2
+  val lastComputerV2 = program.foldLeft(Computer(emptyMemory, Mask(emptyMask), 2))((computer, instruction) => computer.execute(instruction))
+  println(lastComputerV2.memory.values.map(intIsh => intIshToLong(intIsh)).sum)
 
-    def compute(mem: Mem): Computer = {
-      val memAndMask = mem.getBitList.zip(currentMask.getBitList)
-      val newValue = memAndMask.map {
-        case (_, Some(mask)) if mask => true
-        case (_, Some(mask)) => false
-        case (value, None) => value
-      }
-      Computer(memory.updated(mem.address, newValue), currentMask)
-    }
+  case class Computer(memory: Map[Long, IntIsh], currentMask: Mask, version: Int) {
 
     def execute(instruction: Instruction): Computer = instruction match {
       case mask: Mask => setMask(mask)
-      case mem: Mem => compute(mem)
+      case mem: Mem if version == 2 => computeV2(mem)
+      case mem: Mem => computeV1(mem)
     }
-  }
 
-  def toLong(list: IntIsh): Long = {
-    val bits = list.map {
-      case false => 0
-      case true => 1
+    def setMask(mask: Mask): Computer = Computer(memory, mask, version)
+
+    def computeV1(mem: Mem): Computer = {
+      val memAndMask = mem.numberToIntIsh.zip(currentMask.getBitList)
+      val newValue = memAndMask.map {
+        case (_, Some(mask)) if mask => true
+        case (_, Some(_)) => false
+        case (value, None) => value
+      }
+      Computer(memory.updated(mem.address, newValue), currentMask, version)
     }
-    bits.reverse.zipWithIndex.map { case (bit, weight) => (scala.math.pow(2, weight) * bit).toLong }.sum
+
+    def computeV2(mem: Mem): Computer = {
+      val updatedMemory = currentMask.computeAddresses(mem).foldLeft(memory) {
+        (memory, address) => memory.updated(address, mem.numberToIntIsh)
+      }
+      Computer(updatedMemory, currentMask, version)
+    }
   }
 
   abstract class Instruction()
@@ -55,35 +62,65 @@ object Day14 extends App {
       case '1' => Some(true)
     }
 
+    def computeAddresses(mem: Mem): List[Long] = {
+      val addresses = ListBuffer(mem.addressToIntIsh)
+      mask.zipWithIndex.foreach { entry =>
+        entry._1 match {
+          case '1' => addresses.foreach(a => a.update(entry._2, true)) // Set to one
+          case 'X' => addresses.foreach(a => a.update(entry._2, true)) // Set to one
+            addresses.addAll {
+              addresses.map { // Create copies with zeroes
+                address =>
+                  val newAddress = address.clone()
+                  newAddress.update(entry._2, false)
+                  newAddress
+              }
+            }
+          case _ => ()
+        }
+      }
+      addresses.map(intIshToLong).toList
+    }
+
     override def toString: String = mask
   }
 
   case class Mem(address: Long, number: Long) extends Instruction {
 
-    /**
-     * @return Most Significant bit has index 0
-     */
-    def getBitList: IntIsh = {
-      val bitList = number.toBinaryString.reverse.toCharArray.map {
-        case '0' => false
-        case '1' => true
-      }
-      pad(bitList).reverse
-    }
+    def numberToIntIsh: IntIsh = longToIntIsh(number)
 
-    private def pad(bitList: Array[Boolean]): IntIsh = {
-      val diff = 36 - bitList.length
-      val appendix = (0 until diff).map(_ => false)
-      bitList ++ appendix
-    }
+    def addressToIntIsh: IntIsh = longToIntIsh(address)
 
-    override def toString: String = intIshString(getBitList)
+    override def toString: String = intIshString(numberToIntIsh)
   }
+
+  type IntIsh = Array[Boolean]
 
   def intIshString(intIsh: IntIsh): String = intIsh.map {
     case false => '0'
     case true => '1'
   }.mkString
 
+  def intIshToLong(list: IntIsh): Long = {
+    val bits = list.map {
+      case false => 0
+      case true => 1
+    }
+    bits.reverse.zipWithIndex.map { case (bit, weight) => (scala.math.pow(2, weight) * bit).toLong }.sum
+  }
 
+  def longToIntIsh(number: Long): IntIsh = {
+
+    def pad(bitList: Array[Boolean], length: Int): IntIsh = {
+      val diff = length - bitList.length
+      val appendix = (0 until diff).map(_ => false)
+      bitList ++ appendix
+    }
+
+    val bitList = number.toBinaryString.reverse.map {
+      case '0' => false
+      case '1' => true
+    }.toArray
+    pad(bitList, 36).reverse
+  }
 }
