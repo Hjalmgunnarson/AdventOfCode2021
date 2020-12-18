@@ -40,22 +40,19 @@ object Day16 extends App {
   def reduceOptions(listsMap: mutable.HashMap[Int, List[String]]): mutable.HashMap[Int, List[String]] = {
     if (listsMap.forall { case (_, list) => list.length == 1 }) listsMap // Done
     else {
-      if (!listsMap.exists { case (_, list) => list.length == 1 }) listsMap // Identify list that contain only one value
-      else {
-        val entriesWithOneItem = listsMap.filter { case (_, list) => list.length == 1 }
-        entriesWithOneItem.foreach { case (indexToKeep, oneItem) =>
-          println("Looking at " + oneItem.head + " @ " + indexToKeep)
-          listsMap.foreach { case (index, _) if index != indexToKeep => listsMap.updateWith(index) {
-            case Some(list) =>
-              println("Trying to remove " + oneItem.head + " from " + list.mkString(", ") + " @" + index)
-              Some(list.filterNot(_ == oneItem.head)) // Eliminate the value found from all other lists
-            case None => None
-          }
-          case _ => ()
-          }
+      val entriesWithOneItem = listsMap.filter { case (_, list) => list.length == 1 } // Identify lists that contain only one value
+      entriesWithOneItem.foreach { case (indexToKeep, oneItem) =>
+        println("Looking at " + oneItem.head + " @ " + indexToKeep)
+        listsMap.foreach { case (index, _) if index != indexToKeep => listsMap.updateWith(index) {
+          case Some(list) =>
+            println("Trying to remove " + oneItem.head + " from " + list.mkString(", ") + " @" + index)
+            Some(list.filterNot(_ == oneItem.head)) // Eliminate the value found from all other lists
+          case None => None
         }
-        reduceOptions(listsMap)
+        case _ => ()
+        }
       }
+      reduceOptions(listsMap)
     }
   }
 
