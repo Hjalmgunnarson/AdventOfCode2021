@@ -62,6 +62,7 @@ object Day14 extends App {
       case '1' => Some(true)
     }
 
+    // Solution taken from https://todd.ginsberg.com/post/advent-of-code/2020/day14/
     def computeAddresses(mem: Mem): List[Long] = {
       val addresses = ListBuffer(mem.addressToIntIsh)
       mask.zipWithIndex.foreach { entry =>

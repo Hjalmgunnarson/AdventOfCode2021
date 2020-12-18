@@ -3,6 +3,7 @@ package adventOfCode
 import scala.collection.mutable
 
 object Day15 extends App {
+  // Concept by https://github.com/caspermeijn
   val map = mutable.HashMap(1 -> (0, 0), 20 -> (1, 1), 8 -> (2, 2), 12 -> (3, 3), 0 -> (4, 4), 14 -> (5, 5))
   var i = map.size
   var lastEntry = 14
