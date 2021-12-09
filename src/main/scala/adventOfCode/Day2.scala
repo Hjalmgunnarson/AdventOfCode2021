@@ -7,8 +7,8 @@ object Day2 extends App {
   val test = List("forward 5", "down 5", "forward 8", "up 3", "down 8", "forward 2")
 
   val commands = Source.fromResource("day2Input.txt").getLines.toList
-  val temp = move(commands, Tuple2(0,0))
-  println(temp._1 * temp._2)
+  val position = move(commands, Tuple2(0,0))
+  println(position._1 * position._2)
 
   // Part 1
   @tailrec
@@ -29,6 +29,5 @@ object Day2 extends App {
       case "up" => Tuple2(0, 0 - i.toInt)
       case "down" => Tuple2(0, i.toInt)
     }
-
   }
 }
