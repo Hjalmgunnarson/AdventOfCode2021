@@ -3,19 +3,8 @@ package adventOfCode
 import scala.io.Source
 
 object Day1 extends App {
-  val numbers = Source.fromResource("day1Input.txt").getLines.toList
-  for {
-    numberA <- numbers.map(_.toInt)
-    numberB <- numbers.map(_.toInt)
-    if numberA + numberB == 2020
-    product = numberA * numberB
-  } println(product)
+  val numbers = Source.fromResource("day1Input.txt").getLines.toList.map(_.toInt)
 
-  for {
-    numberA <- numbers.map(_.toInt)
-    numberB <- numbers.map(_.toInt)
-    numberC <- numbers.map(_.toInt)
-    if numberA + numberB + numberC == 2020
-    product = numberA * numberB * numberC
-  } println(product)
+  println(numbers.sliding(2).map{ case a :: b :: Nil => if (b > a)  1 else 0 }.sum)
+
 }
