@@ -1,5 +1,6 @@
 package adventOfCode
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.io.Source
 
@@ -8,25 +9,48 @@ object Day3 extends App {
   val lines = Source.fromResource("day3Input.txt").getLines.toList
 
   val bitMap = transpose(lines)
-  val gammaRateBits = getGammaRate(bitMap)
-  val epsilonRateBits = getEpsilonRateBits(gammaRateBits)
+  val gammaRateBits = getRate(bitMap, mostCommon)
+  val epsilonRateBits = getRate(bitMap, leastCommon)
   val gammaRate = toDecimalValue(gammaRateBits)
   val epsilonRate = toDecimalValue(epsilonRateBits)
   println(gammaRate * epsilonRate)
 
-  // for each bit index, return the most common bit value
-  def getGammaRate(bitSequences: Map[Int, Seq[Int]]): Map[Int, Int] = {
+
+  // Part 2 ----------------------------------------------------------------
+  val oxGenRatingBits = filterForRating(lines, oxygenBitCriteria, 0)
+  val co2ScrubberRatingBits = filterForRating(lines, co2ScrubberCriteria, 0)
+  val oxGenRating = toDecimalValue(oxGenRatingBits.head.zipWithIndex.map{ case (c, i) => i -> c.asDigit }.toMap)
+  val co2ScrubberRating = toDecimalValue(co2ScrubberRatingBits.head.zipWithIndex.map{ case (c, i) => i -> c.asDigit }.toMap)
+  println(oxGenRating * co2ScrubberRating)
+
+  // for each bit index, return a bit determined by the criteria
+  def getRate(bitSequences: Map[Int, Seq[Int]], criteria: (Int, Int) => Int): Map[Int, Int] = {
     bitSequences.map { case (index, sequence) =>
       val ones = sequence.count(_ == 1)
       val zeroes = sequence.count(_ == 0)
-      val value = if (ones > zeroes) 1 else 0
-      (index, value)
+      (index, criteria(ones, zeroes))
     }
   }
 
-  // invert the gammaRate bits
-  def getEpsilonRateBits(gammaRateBits: Map[Int, Int]): Map[Int, Int] =
-    gammaRateBits.map { case (index, value) => if (value == 0) (index, 1) else (index, 0) }
+  @tailrec
+  def filterForRating(input: List[String], criteria: (Int, Int) => Int, index: Int): List[String] = {
+    input match {
+      case filteredValue :: Nil => List(filteredValue)
+      case list =>
+        val ones = list.count(s => s.charAt(index).asDigit == 1)
+        val zeroes = list.count(s => s.charAt(index).asDigit == 0)
+        filterForRating(list.filter(s => s.charAt(index).asDigit == criteria(ones, zeroes)), criteria, index + 1)
+    }
+  }
+
+  def mostCommon(ones: Int, zeroes: Int): Int = if (ones > zeroes) 1 else 0
+
+  def leastCommon(ones: Int, zeroes: Int): Int = if (ones > zeroes) 0 else 1
+
+  def oxygenBitCriteria(ones: Int, zeroes: Int): Int = if (ones >= zeroes) 1 else 0
+
+  def co2ScrubberCriteria(ones: Int, zeroes: Int): Int = if (ones >= zeroes) 0 else 1
+
 
   // binary to decimal conversion
   def toDecimalValue(bits: Map[Int, Int]): Int = bits.foldLeft(0) {
