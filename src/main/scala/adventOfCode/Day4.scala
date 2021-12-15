@@ -12,12 +12,31 @@ object Day4 extends App {
 
   println(play(cards, bingoNumbers).get)
 
+  val newCards = createCards(List.empty[BingoCard], Seq.empty[Seq[Int]], lines.tail.tail)
+  println(findLast(newCards, bingoNumbers).get)
+
   def play(cards: List[BingoCard], numbers: Seq[Int]): Option[Int] = {
     numbers match {
       case Nil => Option.empty
       case number :: numbers =>
         cards.foreach(card => card.check(number))
         cards.find(_.bingo()).map(_.getPoints * number).orElse(play(cards, numbers))
+    }
+  }
+
+  @tailrec
+  def findLast(cards: List[BingoCard], numbers: Seq[Int]): Option[Int] = {
+    numbers match {
+      case Nil => Option.empty
+      case number :: numbers =>
+        cards match {
+          case card :: Nil =>
+            card.check(number)
+            if (card.bingo()) Some(card.getPoints * number) else findLast(cards, numbers)
+          case _ =>
+            cards.foreach(card => card.check(number))
+            findLast(cards.filterNot(_.bingo()), numbers)
+        }
     }
   }
 
